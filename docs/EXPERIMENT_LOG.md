@@ -202,6 +202,46 @@ python3 scripts/linear_probe.py \
   --output outputs/linear_probe_checkpoint_curve_2k.json
 ```
 
+## CUDA 10k-video checkpoint curve
+
+The 10k-video CUDA run was evaluated on six selected checkpoints with one
+fixed protocol: 100 train and 20 held-out validation videos per class. The
+margin uses a fixed late central target block and a wrong target from another
+video in the same batch at identical masked positions. Retrieval uses the
+training split as gallery; Recall@1 and Recall@5 mean that a retrieved gallery
+clip has the query's action class.
+
+| Step | Correct-wrong margin | Frozen probe | k-NN (k=20) | Retrieval R@1 | Retrieval R@5 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 4,000 | 0.1547 | 13.5% | 12.0% | 13.5% | 41.0% |
+| 5,000 | 0.1966 | 13.5% | 10.0% | 9.0% | 43.5% |
+| 6,500 | 0.1949 | 13.0% | 12.0% | 13.0% | 43.5% |
+| 7,000 | 0.2213 | **15.0%** | 10.5% | **15.0%** | **44.5%** |
+| 9,000 | **0.2234** | 14.0% | 11.5% | 11.5% | 44.0% |
+| 10,000 | 0.2213 | 14.0% | 10.0% | 12.0% | 43.5% |
+
+Interpretation: video-specific latent prediction improves clearly, then
+plateaus around 7k steps. Step 9k has the numerically highest held-out margin,
+but step 7k is the more useful current checkpoint for action downstream tasks:
+it has the best frozen-probe and retrieval R@1 results. k-NN and retrieval
+remain only modestly above the 10% 10-way chance level; R@5 is also only
+slightly above the approximately 41% independent-label baseline. The project
+therefore has evidence of better video specificity, but not yet strong
+action-semantic separation.
+
+Reproduce this curve with:
+
+```bash
+python3 scripts/evaluate_checkpoint_curve.py \
+  --checkpoint outputs/pretrain_something_v2_10k_cuda_10k/checkpoint_step_004000.pt \
+  --checkpoint outputs/pretrain_something_v2_10k_cuda_10k/checkpoint_step_005000.pt \
+  --checkpoint outputs/pretrain_something_v2_10k_cuda_10k/checkpoint_step_006500.pt \
+  --checkpoint outputs/pretrain_something_v2_10k_cuda_10k/checkpoint_step_007000.pt \
+  --checkpoint outputs/pretrain_something_v2_10k_cuda_10k/checkpoint_step_009000.pt \
+  --checkpoint outputs/pretrain_something_v2_10k_cuda_10k/checkpoint_step_010000.pt \
+  --output outputs/pretrain_something_v2_10k_cuda_10k/checkpoint_evaluation_curve.json
+```
+
 ## Next steps
 
 1. **Scale data on CUDA.** Run `configs/pretrain_something_v2_10k_cuda.yaml`:

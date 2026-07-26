@@ -110,6 +110,11 @@ python3 scripts/compare_wrong_target_margin.py \
   --samples 100 --output outputs/wrong_target_margin_comparison.json
 ```
 
+For a checkpoint curve that combines held-out margin, frozen linear probing,
+k-NN classification, and class-based retrieval Recall@1/5 on one fixed split,
+use `scripts/evaluate_checkpoint_curve.py`. The experiment log contains the
+exact 10k-video command and interpretation.
+
 ### Linear-probe checkpoint curve
 
 Freeze the encoder, train only one linear classification layer, and use the same 10-class train/validation split at every checkpoint. This is the clearest way to track whether pretraining improves action-relevant features rather than only reducing JEPA loss.
