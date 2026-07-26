@@ -1,0 +1,8 @@
+defaults: pretrain_something_v2_full_cuda_b32_50k.yaml
+
+# Short, isolated throughput benchmark. Do not use for representation quality.
+training:
+  steps: 250
+  log_every: 50
+  checkpoint_every: 250
+  output_dir: outputs/benchmark_something_v2_full_b32
