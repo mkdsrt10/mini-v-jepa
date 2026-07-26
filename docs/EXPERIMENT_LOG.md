@@ -168,12 +168,39 @@ The small encoder can reduce the loss and create a non-trivial held-out margin.
 It may eventually limit semantic action features, but current evidence points
 more strongly to objective shortcuts and limited data diversity.
 
-### 5. Linear-probe results remain inconclusive
+### 5. Full frozen linear-probe curve is above chance but mostly flat
 
-The preliminary small protocol (20 training clips and 10 validation clips per
-class) produced around 6--7% top-1 accuracy on a 10-way task. That is near
-chance and does not yet demonstrate linearly separable action features. Use a
-fixed, larger probe split before treating it as a model-selection metric.
+A fixed full probe trains only a linear classifier on frozen encoder features,
+using 100 training and 20 held-out validation videos per class (1,000 / 200
+videos total). Chance accuracy is 10%.
+
+| Checkpoint | Top-1 accuracy |
+| --- | ---: |
+| scheduled step 100 | 13.5% |
+| scheduled step 500 | 13.5% |
+| scheduled step 1,000 | **15.0%** |
+| scheduled step 1,500 | 13.0% |
+| scheduled step 2,000 | 14.5% |
+| fixed-baseline step 1,100 | 14.0% |
+
+The scheduled representation is modestly above chance and peaks at step 1,000,
+slightly ahead of the previous fixed-schedule reference. The curve is not yet
+strong or monotonic; several classes remain difficult for a linear head. This
+means the wrong-target margin improved more clearly than action-label
+separability. The next data-scale and schedule-ablation experiments should use
+this exact frozen-probe protocol.
+
+The implementation decodes each video once while extracting features for all
+requested checkpoints, making a fair checkpoint curve practical even when VP9
+decoding is the bottleneck:
+
+```bash
+python3 scripts/linear_probe.py \
+  --checkpoint outputs/pretrain_something_v2_1k_ema_cosine_2k/checkpoint_step_000100.pt \
+  --checkpoint outputs/pretrain_something_v2_1k_ema_cosine_2k/checkpoint_step_001000.pt \
+  --checkpoint outputs/pretrain_something_v2_1k_ema_cosine_2k/checkpoint_step_002000.pt \
+  --output outputs/linear_probe_checkpoint_curve_2k.json
+```
 
 ## Next steps
 
