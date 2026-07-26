@@ -9,6 +9,7 @@ import sys
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from pretrain import load_config
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from vjepa.data.collator import collate_videos
@@ -87,6 +88,8 @@ def retrieval_scores(train_features, train_labels, val_features, val_labels):
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, action="append", required=True)
+    parser.add_argument("--evaluation-config", type=Path,
+                        help="Config that selects the fixed labelled evaluation classes; defaults to checkpoint config.")
     parser.add_argument("--train-per-class", type=int, default=100)
     parser.add_argument("--val-per-class", type=int, default=20)
     parser.add_argument("--probe-epochs", type=int, default=100)
@@ -99,6 +102,12 @@ def main() -> None:
     for _, checkpoint in checkpoints[1:]:
         if checkpoint["config"]["model"] != model_config or checkpoint["config"]["data"] != data:
             raise ValueError("All checkpoints must use the same model and data configuration.")
+    evaluation_config = load_config(args.evaluation_config) if args.evaluation_config else config
+    evaluation_data = evaluation_config["data"]
+    if evaluation_config["model"] != model_config:
+        raise ValueError("Evaluation config must use the checkpoint's model architecture.")
+    if evaluation_data.get("num_classes") is None:
+        raise ValueError("Evaluation config must define a finite labelled class subset.")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     models = []
     for path, checkpoint in checkpoints:
@@ -106,9 +115,9 @@ def main() -> None:
         model.load_state_dict(checkpoint["trainer"]["model"]); model.eval()
         models.append((path, model))
 
-    train_data = dataset_for(config, "train", args.train_per_class)
-    val_data = dataset_for(config, "validation", args.val_per_class)
-    loader_args = {"batch_size": data["batch_size"], "collate_fn": collate_videos}
+    train_data = dataset_for(evaluation_config, "train", args.train_per_class)
+    val_data = dataset_for(evaluation_config, "validation", args.val_per_class)
+    loader_args = {"batch_size": evaluation_data["batch_size"], "collate_fn": collate_videos}
     train_features, train_labels = collect_train_features(models, DataLoader(train_data, **loader_args), device)
     frames = model_config.get("num_frames", model_config.get("frames"))
     grid = (frames // model_config["tubelet_size"], model_config["image_size"] // model_config["patch_size"], model_config["image_size"] // model_config["patch_size"])
@@ -119,7 +128,8 @@ def main() -> None:
     results = []
     for index, ((path, checkpoint), train_feature, val_feature, margin) in enumerate(zip(checkpoints, train_features, val_features, margins)):
         torch.manual_seed(config["seed"])
-        probe_accuracy, _ = fit_linear_probe(train_feature, train_labels, val_feature, val_labels, data["num_classes"], args.probe_epochs)
+        probe_accuracy, _ = fit_linear_probe(train_feature, train_labels, val_feature, val_labels,
+                                              evaluation_data["num_classes"], args.probe_epochs)
         correct = margin["correct"] / margin["tokens"]
         wrong = margin["wrong"] / margin["tokens"]
         results.append({
@@ -133,6 +143,7 @@ def main() -> None:
     result = {
         "protocol": {
             "train_per_class": args.train_per_class, "val_per_class": args.val_per_class,
+            "evaluation_classes": evaluation_data.get("class_templates"),
             "wrong_target": "another video in the same batch at identical masked positions",
             "retrieval": "same-class gallery match at rank 1 or within top 5",
         },

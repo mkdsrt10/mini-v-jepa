@@ -244,11 +244,14 @@ python3 scripts/evaluate_checkpoint_curve.py \
 
 ## Next steps
 
-1. **Scale data on CUDA.** Run `configs/pretrain_something_v2_10k_cuda.yaml`:
-   ten high-volume classes x 1,000 clips, 10,000 CUDA updates, and the current
-   EMA/LR schedules. The configuration requires CUDA and will not fall back to
-   CPU. Evaluate the same wrong-target-margin and fixed frozen-probe curves at
-   steps 100, 500, 1,000, 2,000, 5,000, and 10,000.
+1. **Full-data CUDA experiment.** The local SSv2 training set contains 168,913
+   usable videos from 174 classes. Run
+   `configs/pretrain_something_v2_full_cuda_b16_100k.yaml`: batch 16, eight
+   persistent VP9 decoder workers, and 100,000 updates (1.6M clip exposures,
+   about 9.5 dataset passes). Keep the compact encoder unchanged so this is a
+   data-diversity and duration comparison, not a mixed scaling experiment.
+   Evaluate the same fixed 10-class probe/retrieval split at steps 2,500,
+   10,000, 25,000, 50,000, 75,000, and 100,000.
 2. **Isolate schedules.** Run fixed-EMA plus scheduled-LR and scheduled-EMA
    plus fixed-LR, each from the same seed and for 1,100 steps. Compare margins.
 3. **Keep the margin as the gate.** Report correct cosine, wrong cosine, and

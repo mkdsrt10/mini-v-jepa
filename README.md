@@ -166,6 +166,28 @@ by four:
 python3 scripts/pretrain.py --config configs/pretrain_something_v2_10k_cuda_b16.yaml
 ```
 
+### Full Something-Something V2, 100k-update experiment
+
+The next data-scale experiment uses every available SSv2 training class and
+video. It keeps the compact encoder unchanged, uses batch 16 with eight
+decoder workers, and runs 100,000 updates (about 1.6M clip exposures). The
+same fixed 10-class probe/retrieval split is retained for comparison with the
+10k-video run:
+
+```bash
+python3 scripts/pretrain.py --config configs/pretrain_something_v2_full_cuda_b16_100k.yaml
+
+python3 scripts/evaluate_checkpoint_curve.py \
+  --evaluation-config configs/pretrain_something_v2_10k_cuda.yaml \
+  --checkpoint outputs/pretrain_something_v2_full_cuda_b16_100k/checkpoint_step_002500.pt \
+  --checkpoint outputs/pretrain_something_v2_full_cuda_b16_100k/checkpoint_step_010000.pt \
+  --checkpoint outputs/pretrain_something_v2_full_cuda_b16_100k/checkpoint_step_025000.pt \
+  --checkpoint outputs/pretrain_something_v2_full_cuda_b16_100k/checkpoint_step_050000.pt \
+  --checkpoint outputs/pretrain_something_v2_full_cuda_b16_100k/checkpoint_step_075000.pt \
+  --checkpoint outputs/pretrain_something_v2_full_cuda_b16_100k/checkpoint_step_100000.pt \
+  --output outputs/pretrain_something_v2_full_cuda_b16_100k/checkpoint_evaluation_curve.json
+```
+
 ## License
 
 MIT — add a `LICENSE` file before publishing if you choose a different license.

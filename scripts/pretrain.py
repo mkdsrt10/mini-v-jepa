@@ -86,8 +86,23 @@ def main() -> None:
             occlusion=data_config["occlusion"], collisions=data_config["collisions"], seed=config["seed"],
             num_classes=data_config.get("num_classes", 10), clips_per_class=data_config.get("clips_per_class"),
         )
-    loader = DataLoader(dataset, batch_size=data_config["batch_size"], shuffle=True,
-                        collate_fn=collate_videos, drop_last=True)
+    num_workers = data_config.get("num_workers", 0)
+    loader_options = {
+        "batch_size": data_config["batch_size"],
+        "shuffle": True,
+        "collate_fn": collate_videos,
+        "drop_last": True,
+        # Pinned host memory speeds host-to-GPU transfer. It is harmlessly off
+        # by default for CPU/debug runs.
+        "pin_memory": data_config.get("pin_memory", device == "cuda"),
+        "num_workers": num_workers,
+    }
+    if num_workers > 0:
+        # Keep VP9 decoder workers alive between epochs instead of repeatedly
+        # recreating them; prefetch enough batches to keep an L4 fed.
+        loader_options["persistent_workers"] = True
+        loader_options["prefetch_factor"] = data_config.get("prefetch_factor", 2)
+    loader = DataLoader(dataset, **loader_options)
     model = VJEPA(**model_config)
     masker_type = config["mask"]["type"]
     if masker_type == "vjepa_tube":

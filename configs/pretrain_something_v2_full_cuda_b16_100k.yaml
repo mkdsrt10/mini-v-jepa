@@ -1,0 +1,49 @@
+defaults: debug.yaml
+
+# Data-scale experiment: every available Something-Something V2 training video
+# and class. Labels are not consumed by JEPA pretraining; retaining all 174
+# classes maximizes motion and object-interaction diversity.
+data:
+  dataset: something_v2
+  root: data/something-something-v2
+  split: train
+  num_classes: null
+  samples_per_class: null
+  class_templates: null
+  clip_frames: 16
+  image_size: 112
+  batch_size: 16
+  # OpenCV VP9 decoding is the likely bottleneck, not L4 VRAM.
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 4
+model:
+  # Keep the current compact model unchanged. This isolates data diversity and
+  # training duration; scale the encoder only after this comparison.
+  image_size: 112
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 128
+  depth: 3
+  num_heads: 4
+  predictor_depth: 2
+mask:
+  type: vjepa_tube
+optim:
+  lr: 0.0003
+  lr_schedule: warmup_cosine
+  lr_start: 0.00003
+  lr_end: 0.00003
+  warmup_steps: 5000
+  weight_decay: 0.04
+  ema_momentum: 0.996
+  ema_schedule: cosine
+  ema_momentum_end: 0.9999
+training:
+  # 100k x batch 16 = 1.6M clip exposures, about 9.5 passes over full SSv2.
+  steps: 100000
+  log_every: 100
+  checkpoint_every: 2500
+  output_dir: outputs/pretrain_something_v2_full_cuda_b16_100k
+  device: cuda
