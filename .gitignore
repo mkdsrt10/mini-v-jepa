@@ -4,6 +4,5 @@ __pycache__/
 .venv/
 wandb/
 checkpoints/
-data/
+/data/
 outputs/
-

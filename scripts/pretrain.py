@@ -11,7 +11,12 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from vjepa.data.collator import collate_videos
-from vjepa.data.video_dataset import MovingMNISTDataset, MovingShapesDataset, SomethingSomethingV2Dataset
+from vjepa.data.video_dataset import (
+    MovingMNISTDataset,
+    MovingShapesDataset,
+    SomethingSomethingV2Dataset,
+    configure_video_decode_worker,
+)
 from vjepa.masking.multiblock import MultiBlockMask, VJEPATubeMask
 from vjepa.masking.random_tube import RandomTubeMask
 from vjepa.models.vjepa import VJEPA
@@ -102,6 +107,7 @@ def main() -> None:
         # recreating them; prefetch enough batches to keep an L4 fed.
         loader_options["persistent_workers"] = True
         loader_options["prefetch_factor"] = data_config.get("prefetch_factor", 2)
+        loader_options["worker_init_fn"] = configure_video_decode_worker
     loader = DataLoader(dataset, **loader_options)
     model = VJEPA(**model_config)
     masker_type = config["mask"]["type"]

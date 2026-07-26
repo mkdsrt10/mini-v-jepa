@@ -188,6 +188,12 @@ python3 scripts/evaluate_checkpoint_curve.py \
   --output outputs/pretrain_something_v2_full_cuda_b16_100k/checkpoint_evaluation_curve.json
 ```
 
+If the batch-16 full-data run stays near 30% L4 utilization with large VRAM
+headroom, `configs/pretrain_something_v2_full_cuda_b32_50k.yaml` is the clean
+batch-32 throughput profile. It retains the same 1.6M total clip exposures but
+uses 50,000 updates. Start it as a fresh run; do not change an active run's
+batch size mid-experiment.
+
 ## License
 
 MIT — add a `LICENSE` file before publishing if you choose a different license.

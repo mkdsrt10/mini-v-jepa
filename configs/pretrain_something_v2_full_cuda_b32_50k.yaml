@@ -1,0 +1,20 @@
+defaults: pretrain_something_v2_full_cuda_b16_100k.yaml
+
+# L4 throughput profile. The previous batch-16 run used ~1 GB of 23 GB VRAM
+# and only ~30% GPU utilization. Batch 32 gives the small ViT more work per
+# optimizer step while preserving the same total 1.6M clip-exposure budget.
+data:
+  batch_size: 32
+  # Host has eight cores: keep one decoder worker per core. Two prefetched
+  # batch-32 tensors per worker already occupy substantial host memory.
+  num_workers: 8
+  prefetch_factor: 2
+optim:
+  # Preserve conservative optimization rather than mixing LR scaling into this
+  # throughput comparison.
+  warmup_steps: 2500
+training:
+  steps: 50000
+  log_every: 50
+  checkpoint_every: 1250
+  output_dir: outputs/pretrain_something_v2_full_cuda_b32_50k
