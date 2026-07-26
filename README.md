@@ -140,6 +140,18 @@ separate output directory:
 python3 scripts/pretrain.py --config configs/pretrain_something_v2_1k_ema_schedule.yaml
 ```
 
+### CUDA 10k-video scale-up
+
+`configs/pretrain_something_v2_10k_cuda.yaml` uses ten high-volume
+Something-Something V2 action classes with 1,000 clips each: 10,000 balanced
+videos total. It is intentionally CUDA-only, uses the same EMA/LR schedules,
+and trains for 10,000 updates at batch size 4 (about four passes over the
+subset). It fails clearly instead of silently falling back to CPU.
+
+```bash
+python3 scripts/pretrain.py --config configs/pretrain_something_v2_10k_cuda.yaml
+```
+
 ## License
 
 MIT — add a `LICENSE` file before publishing if you choose a different license.

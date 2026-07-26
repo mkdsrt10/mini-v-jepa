@@ -204,10 +204,13 @@ python3 scripts/linear_probe.py \
 
 ## Next steps
 
-1. **Isolate schedules.** Run fixed-EMA plus scheduled-LR and scheduled-EMA
+1. **Scale data on CUDA.** Run `configs/pretrain_something_v2_10k_cuda.yaml`:
+   ten high-volume classes x 1,000 clips, 10,000 CUDA updates, and the current
+   EMA/LR schedules. The configuration requires CUDA and will not fall back to
+   CPU. Evaluate the same wrong-target-margin and fixed frozen-probe curves at
+   steps 100, 500, 1,000, 2,000, 5,000, and 10,000.
+2. **Isolate schedules.** Run fixed-EMA plus scheduled-LR and scheduled-EMA
    plus fixed-LR, each from the same seed and for 1,100 steps. Compare margins.
-2. **Scale data.** Train on 5,000--10,000 balanced clips while retaining the
-   same held-out classes and evaluation protocol.
 3. **Keep the margin as the gate.** Report correct cosine, wrong cosine, and
    their difference at every selected checkpoint.
 4. **Run a fixed full linear probe.** Use the same train/validation examples,

@@ -61,8 +61,10 @@ def main() -> None:
     for _, checkpoint in checkpoints[1:]:
         if checkpoint["config"]["model"] != config["model"] or checkpoint["config"]["data"] != data:
             raise ValueError("All probe checkpoints must use the same model and data configuration.")
-    train_data = SomethingSomethingV2Dataset(data["root"], "train", data["clip_frames"], data["image_size"], classes, args.train_per_class)
-    val_data = SomethingSomethingV2Dataset(data["root"], "validation", data["clip_frames"], data["image_size"], classes, args.val_per_class)
+    train_data = SomethingSomethingV2Dataset(data["root"], "train", data["clip_frames"], data["image_size"],
+                                              classes, args.train_per_class, data.get("class_templates"))
+    val_data = SomethingSomethingV2Dataset(data["root"], "validation", data["clip_frames"], data["image_size"],
+                                            classes, args.val_per_class, data.get("class_templates"))
     train_loader = DataLoader(train_data, batch_size=data["batch_size"], collate_fn=collate_videos)
     val_loader = DataLoader(val_data, batch_size=data["batch_size"], collate_fn=collate_videos)
     models = []

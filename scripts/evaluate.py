@@ -39,7 +39,7 @@ def main() -> None:
         per_class = max(1, (args.samples + data_config["num_classes"] - 1) // data_config["num_classes"])
         dataset = SomethingSomethingV2Dataset(
             data_config["root"], "validation", data_config["clip_frames"], data_config["image_size"],
-            data_config["num_classes"], per_class,
+            data_config["num_classes"], per_class, data_config.get("class_templates"),
         )
     else:
         dataset = MovingShapesDataset(args.samples, data_config["clip_frames"], data_config["image_size"],

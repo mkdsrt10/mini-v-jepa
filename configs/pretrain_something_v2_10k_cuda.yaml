@@ -1,0 +1,53 @@
+defaults: debug.yaml
+
+# CUDA-only scale-up run. Ten high-volume action classes, each capped at 1,000
+# clips, provide a genuinely balanced 10,000-video training set.
+data:
+  dataset: something_v2
+  root: data/something-something-v2
+  split: train
+  num_classes: 10
+  samples_per_class: 1000
+  class_templates:
+    - Putting something on a surface
+    - Moving something up
+    - Pushing something from left to right
+    - Moving something down
+    - Covering something with something
+    - Pushing something from right to left
+    - Uncovering something
+    - Taking one of many similar things on the table
+    - Throwing something
+    - Putting something into something
+  clip_frames: 16
+  image_size: 112
+  batch_size: 4
+model:
+  image_size: 112
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 128
+  depth: 3
+  num_heads: 4
+  predictor_depth: 2
+mask:
+  type: vjepa_tube
+optim:
+  lr: 0.0003
+  lr_schedule: warmup_cosine
+  lr_start: 0.00003
+  lr_end: 0.00003
+  warmup_steps: 500
+  weight_decay: 0.04
+  ema_momentum: 0.996
+  ema_schedule: cosine
+  ema_momentum_end: 0.9999
+training:
+  # 10,000 steps x batch 4 exposes the model to roughly four passes over 10k clips.
+  steps: 10000
+  log_every: 50
+  checkpoint_every: 500
+  output_dir: outputs/pretrain_something_v2_10k_cuda_10k
+  # Never silently fall back to CPU for this experiment.
+  device: cuda

@@ -23,7 +23,8 @@ def main() -> None:
     args = parser.parse_args()
     config = load_config(Path(args.config)); data, model = config["data"], config["model"]
     dataset = SomethingSomethingV2Dataset(data["root"], data.get("split", "train"), data["clip_frames"],
-                                          data["image_size"], data["num_classes"], data["samples_per_class"])
+                                          data["image_size"], data["num_classes"], data["samples_per_class"],
+                                          data.get("class_templates"))
     grid = (model["num_frames"] // model["tubelet_size"], model["image_size"] // model["patch_size"], model["image_size"] // model["patch_size"])
     output = Path(args.output); output.mkdir(parents=True, exist_ok=True)
     manifest, sampler = [], VJEPATubeMask()

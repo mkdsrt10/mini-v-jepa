@@ -42,6 +42,11 @@ def load_config(path: Path) -> dict:
 def choose_device(requested: str) -> str:
     if requested == "auto":
         return "cuda" if torch.cuda.is_available() else "cpu"
+    if requested == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(
+            "This configuration requires CUDA, but PyTorch cannot see a CUDA device. "
+            "Check nvidia-smi, the NVIDIA driver, and your CUDA-enabled PyTorch installation."
+        )
     return requested
 
 
@@ -70,6 +75,7 @@ def main() -> None:
         dataset = SomethingSomethingV2Dataset(
             data_config["root"], data_config.get("split", "train"), data_config["clip_frames"],
             data_config["image_size"], data_config.get("num_classes"), data_config.get("samples_per_class"),
+            data_config.get("class_templates"),
         )
         print(f"Selected {len(dataset)} videos across {len(dataset.class_templates)} classes: {dataset.class_counts}")
     else:

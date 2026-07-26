@@ -46,7 +46,10 @@ def make_dataset(config: dict, samples: int):
     data = config["data"]; name = data.get("dataset", "synthetic")
     if name == "something_v2":
         per_class = max(1, (samples + data["num_classes"] - 1) // data["num_classes"])
-        return SomethingSomethingV2Dataset(data["root"], "validation", data["clip_frames"], data["image_size"], data["num_classes"], per_class)
+        return SomethingSomethingV2Dataset(
+            data["root"], "validation", data["clip_frames"], data["image_size"],
+            data["num_classes"], per_class, data.get("class_templates"),
+        )
     if name == "moving_mnist":
         return Subset(MovingMNISTDataset(data["root"], data["clip_frames"]), range(samples))
     return MovingShapesDataset(samples, data["clip_frames"], data["image_size"])
