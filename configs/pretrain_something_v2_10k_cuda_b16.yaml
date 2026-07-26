@@ -1,0 +1,15 @@
+defaults: pretrain_something_v2_10k_cuda.yaml
+
+# L4 throughput profile: batch 16 x 2,500 updates = 40,000 clip exposures,
+# matching the conservative batch-4 / 10,000-update experiment's four passes
+# over the 10,000 unique videos. Keep this separate from the baseline config.
+data:
+  batch_size: 16
+optim:
+  # Keep the conservative peak rate until this larger batch is validated.
+  warmup_steps: 125
+training:
+  steps: 2500
+  log_every: 25
+  checkpoint_every: 125
+  output_dir: outputs/pretrain_something_v2_10k_cuda_b16_2500

@@ -152,6 +152,15 @@ subset). It fails clearly instead of silently falling back to CPU.
 python3 scripts/pretrain.py --config configs/pretrain_something_v2_10k_cuda.yaml
 ```
 
+For an NVIDIA L4 with ample memory headroom, use the batch-16 throughput
+profile. It reduces updates to 2,500 so the model still sees roughly four
+passes over the 10k clips, rather than silently multiplying the training budget
+by four:
+
+```bash
+python3 scripts/pretrain.py --config configs/pretrain_something_v2_10k_cuda_b16.yaml
+```
+
 ## License
 
 MIT — add a `LICENSE` file before publishing if you choose a different license.
