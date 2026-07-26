@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import time
 
 import torch
 from torch.utils.data import DataLoader
@@ -172,6 +173,7 @@ def main() -> None:
         f"EMA schedule={ema_schedule_name}; LR schedule={lr_schedule_name}"
     )
     total_steps = min(run_config["steps"], args.max_steps) if args.max_steps else run_config["steps"]
+    last_log_time, last_log_step = time.monotonic(), trainer.global_step
     while trainer.global_step < total_steps:
         try:
             batch = next(batches)
@@ -182,10 +184,15 @@ def main() -> None:
         metrics["step"] = trainer.global_step
         # Always persist the final step too, even for a short smoke run.
         if trainer.global_step % run_config["log_every"] == 0 or trainer.global_step == total_steps:
+            elapsed = time.monotonic() - last_log_time
+            completed_steps = trainer.global_step - last_log_step
+            metrics["clips_per_second"] = completed_steps * data_config["batch_size"] / max(elapsed, 1e-9)
             with metrics_file.open("a") as handle:
                 handle.write(json.dumps(metrics) + "\n")
             print("step {step:04.0f} | loss={loss:.5f} | mask={mask_ratio:.0%} | "
-                  "target_std={target_std:.4f} | pred_std={prediction_std:.4f}".format(**metrics))
+                  "target_std={target_std:.4f} | pred_std={prediction_std:.4f} | "
+                  "speed={clips_per_second:.1f} clips/s".format(**metrics))
+            last_log_time, last_log_step = time.monotonic(), trainer.global_step
         if trainer.global_step % run_config["checkpoint_every"] == 0:
             checkpoint_path = output_dir / f"checkpoint_step_{trainer.global_step:06d}.pt"
             save_checkpoint(checkpoint_path, trainer, config)
