@@ -1,0 +1,29 @@
+seed: 7
+data:
+  root: null
+  synthetic: true
+  clip_frames: 8
+  image_size: 64
+  batch_size: 2
+  object_size: 9
+  direction_change_prob: 0.10
+  occlusion: true
+  collisions: true
+model:
+  image_size: 64
+  num_frames: 8
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 128
+  depth: 3
+  num_heads: 4
+  predictor_depth: 2
+mask:
+  type: random_tube
+  ratio: 0.65
+optim:
+  lr: 0.0003
+  weight_decay: 0.04
+  ema_momentum: 0.996
+training:
+  steps: 30

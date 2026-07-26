@@ -1,0 +1,15 @@
+defaults: debug.yaml
+data:
+  root: data/something-something-v2
+  synthetic: false
+  clip_frames: 16
+  image_size: 224
+  batch_size: 32
+model:
+  image_size: 224
+  num_frames: 16
+  embed_dim: 768
+  depth: 12
+  num_heads: 12
+training:
+  steps: 100000

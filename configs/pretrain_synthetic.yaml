@@ -1,0 +1,32 @@
+# First real V-JEPA pretraining pass: unlimited moving-shapes clips, sparse
+# context, resumable state, and diagnostics suitable for spotting collapse.
+defaults: debug.yaml
+data:
+  synthetic: true
+  dataset_size: 7500
+  num_classes: 10
+  clips_per_class: 750
+  clip_frames: 16
+  image_size: 112
+  batch_size: 8
+  object_size: 13
+  direction_change_prob: 0.10
+  occlusion: true
+  collisions: true
+mask:
+  type: multiblock
+  ratio: 0.30
+  num_blocks: 4
+optim:
+  lr: 0.0003
+  weight_decay: 0.04
+  ema_momentum: 0.996
+training:
+  steps: 1000
+  log_every: 20
+  checkpoint_every: 250
+  output_dir: outputs/pretrain_synthetic_10class
+  device: auto
+model:
+  image_size: 112
+  num_frames: 16

@@ -1,0 +1,9 @@
+# Milestone 2 reference encoder: 8 temporal tubelets x 7 x 7 spatial patches.
+encoder:
+  image_size: 112
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 384
+  depth: 6
+  num_heads: 6

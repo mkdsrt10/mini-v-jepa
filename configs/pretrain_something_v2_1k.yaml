@@ -1,0 +1,28 @@
+defaults: debug.yaml
+data:
+  dataset: something_v2
+  root: data/something-something-v2
+  split: train
+  num_classes: 10
+  samples_per_class: 100
+  clip_frames: 16
+  image_size: 112
+  batch_size: 2
+model:
+  image_size: 112
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 128
+  depth: 3
+  num_heads: 4
+  predictor_depth: 2
+mask:
+  type: vjepa_tube
+training:
+  # Resume from the initial 100-step checkpoint through step 1,100.
+  steps: 1100
+  log_every: 10
+  checkpoint_every: 25
+  output_dir: outputs/pretrain_something_v2_1k_tube
+  device: auto

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mini-vjepa"
+version = "0.1.0"
+description = "A compact educational implementation of V-JEPA"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.2", "torchvision>=0.17", "einops>=0.7", "pyyaml>=6.0", "numpy>=1.26"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+

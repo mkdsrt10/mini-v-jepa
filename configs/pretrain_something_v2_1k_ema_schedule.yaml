@@ -1,0 +1,42 @@
+defaults: debug.yaml
+
+# Controlled experiment: same 10 x 100 Something-Something V2 subset,
+# architecture, optimizer, and masks as the baseline.  Only EMA changes.
+data:
+  dataset: something_v2
+  root: data/something-something-v2
+  split: train
+  num_classes: 10
+  samples_per_class: 100
+  clip_frames: 16
+  image_size: 112
+  batch_size: 2
+model:
+  image_size: 112
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 128
+  depth: 3
+  num_heads: 4
+  predictor_depth: 2
+mask:
+  type: vjepa_tube
+optim:
+  # Target begins responsive, then gradually becomes a stable teacher.
+  ema_momentum: 0.996
+  ema_schedule: cosine
+  ema_momentum_end: 0.9999
+  # A short ramp prevents unstable large early updates; after that, decay to
+  # a low finishing rate for stable representation refinement.
+  lr: 0.0003
+  lr_schedule: warmup_cosine
+  lr_start: 0.00003
+  lr_end: 0.00003
+  warmup_steps: 100
+training:
+  steps: 2000
+  log_every: 10
+  checkpoint_every: 100
+  output_dir: outputs/pretrain_something_v2_1k_ema_cosine_2k
+  device: auto

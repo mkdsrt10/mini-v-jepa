@@ -1,0 +1,26 @@
+defaults: debug.yaml
+data:
+  dataset: moving_mnist
+  root: data/moving-mnist
+  clip_frames: 16
+  image_size: 64
+  batch_size: 16
+model:
+  image_size: 64
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 128
+  depth: 3
+  num_heads: 4
+  predictor_depth: 2
+mask:
+  type: multiblock
+  ratio: 0.40
+  num_blocks: 4
+training:
+  steps: 1000
+  log_every: 20
+  checkpoint_every: 250
+  output_dir: outputs/pretrain_moving_mnist
+  device: auto

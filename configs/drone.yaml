@@ -1,0 +1,13 @@
+defaults: debug.yaml
+data:
+  root: data/drone
+  synthetic: false
+  clip_frames: 16
+  image_size: 224
+  batch_size: 16
+model:
+  image_size: 224
+  num_frames: 16
+mask:
+  type: multiblock
+  ratio: 0.80
