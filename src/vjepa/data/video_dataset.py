@@ -6,17 +6,6 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 
 
-def configure_video_decode_worker(_worker_id: int) -> None:
-    """Keep each DataLoader worker's OpenCV decoder to one CPU thread.
-
-    Eight workers on an eight-core host already provide parallel video decode.
-    Letting every worker create its own OpenCV thread pool can oversubscribe the
-    CPU and starve both decoding and GPU transfer.
-    """
-    import cv2
-    cv2.setNumThreads(1)
-
-
 @dataclass(frozen=True)
 class ObjectState:
     """Pixel-space object state; returned as tensors for supervised diagnostics."""
