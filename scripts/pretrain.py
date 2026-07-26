@@ -17,7 +17,11 @@ from vjepa.masking.random_tube import RandomTubeMask
 from vjepa.models.vjepa import VJEPA
 from vjepa.training.schedules import cosine_momentum, warmup_cosine_learning_rate
 from vjepa.training.trainer import Trainer
-from vjepa.visualisation.training import save_input_and_mask, save_prediction_similarity
+from vjepa.visualisation.training import (
+    prediction_contrast,
+    save_input_and_mask,
+    save_token_contrast_map,
+)
 
 
 def load_config(path: Path) -> dict:
@@ -127,10 +131,13 @@ def main() -> None:
     # Keep one held-aside clip and one mask constant. Checkpoint visualizations
     # are then directly comparable: only the learned model changes over time.
     preview_video = dataset[0]["video"].unsqueeze(0).to(device)
+    # A different fixed clip supplies the wrong target in the contrast map.
+    preview_wrong_video = dataset[1]["video"].unsqueeze(0).to(device)
     preview_mask = masker(1, grid, device)
     preview_mask = preview_mask[0] if isinstance(preview_mask, list) else preview_mask
     save_input_and_mask(preview_video[0], preview_mask[0], output_dir / "input_original_and_masked.png",
                         model_config["tubelet_size"], model_config["patch_size"])
+    contrast_baseline_path = output_dir / "preview_contrast_step_000100.pt"
     batches = iter(loader)
     mask_description = "V-JEPA full-temporal two-group tube masks" if masker_type == "vjepa_tube" else f"target mask ratio={config['mask']['ratio']:.0%}"
     print(
@@ -155,20 +162,41 @@ def main() -> None:
         if trainer.global_step % run_config["checkpoint_every"] == 0:
             checkpoint_path = output_dir / f"checkpoint_step_{trainer.global_step:06d}.pt"
             save_checkpoint(checkpoint_path, trainer, config)
-            similarity = save_prediction_similarity(
-                trainer.model, preview_video, preview_mask,
-                output_dir / f"prediction_similarity_step_{trainer.global_step:06d}.png",
-                model_config["tubelet_size"], model_config["patch_size"],
+            correct, wrong, contrast = prediction_contrast(
+                trainer.model, preview_video, preview_wrong_video, preview_mask
             )
-            print(f"  checkpoint saved; preview target cosine similarity={similarity:.4f}")
+            if trainer.global_step == 100:
+                torch.save(contrast, contrast_baseline_path)
+            save_token_contrast_map(
+                contrast, preview_mask,
+                output_dir / f"prediction_contrast_step_{trainer.global_step:06d}.png",
+                frames, model_config["image_size"], model_config["tubelet_size"], model_config["patch_size"],
+                title=(f"Step {trainer.global_step}: correct − wrong target cosine "
+                       f"(mean {contrast.mean():+.4f}; correct {correct.mean():.4f}, wrong {wrong.mean():.4f})"),
+            )
+            if contrast_baseline_path.exists():
+                baseline = torch.load(contrast_baseline_path, weights_only=True)
+                save_token_contrast_map(
+                    contrast - baseline, preview_mask,
+                    output_dir / f"prediction_contrast_change_from_0100_step_{trainer.global_step:06d}.png",
+                    frames, model_config["image_size"], model_config["tubelet_size"], model_config["patch_size"],
+                    title=f"Step {trainer.global_step}: contrast change from step 100 (mean {(contrast - baseline).mean():+.4f})",
+                    color_limit=0.02,
+                )
+            print(f"  checkpoint saved; preview correct−wrong cosine={contrast.mean():+.4f}")
 
     save_checkpoint(output_dir / "checkpoint_last.pt", trainer, config)
-    similarity = save_prediction_similarity(
-        trainer.model, preview_video, preview_mask, output_dir / "prediction_similarity_final.png",
-        model_config["tubelet_size"], model_config["patch_size"],
+    correct, wrong, contrast = prediction_contrast(
+        trainer.model, preview_video, preview_wrong_video, preview_mask
+    )
+    save_token_contrast_map(
+        contrast, preview_mask, output_dir / "prediction_contrast_final.png",
+        frames, model_config["image_size"], model_config["tubelet_size"], model_config["patch_size"],
+        title=(f"Final: correct − wrong target cosine (mean {contrast.mean():+.4f}; "
+               f"correct {correct.mean():.4f}, wrong {wrong.mean():.4f})"),
     )
     print(f"Done. Metrics: {metrics_file}; checkpoint: {output_dir / 'checkpoint_last.pt'}")
-    print(f"Final preview target cosine similarity={similarity:.4f}")
+    print(f"Final preview correct−wrong cosine={contrast.mean():+.4f}")
 
 
 if __name__ == "__main__":

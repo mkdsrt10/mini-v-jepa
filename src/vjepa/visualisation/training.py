@@ -1,6 +1,7 @@
 """Visual diagnostics for JEPA training (which predicts features, not pixels)."""
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
 from torchvision.utils import make_grid, save_image
@@ -29,24 +30,56 @@ def save_input_and_mask(video: torch.Tensor, target_mask: torch.Tensor, path: st
 
 
 @torch.no_grad()
-def save_prediction_similarity(model, video: torch.Tensor, target_mask: torch.Tensor,
-                               path: str | Path, tubelet_size: int, patch_size: int) -> float:
-    """Visualize predicted-vs-target cosine similarity at every masked tubelet.
+def prediction_contrast(
+    model, video: torch.Tensor, wrong_video: torch.Tensor, target_mask: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Return per-target correct, wrong, and correct-minus-wrong cosines.
 
-    JEPA has no pixel decoder, so this is the faithful qualitative result: bright
-    target regions are latent features the predictor matched well; grey regions
-    were visible context and were not prediction targets.
+    The prediction comes from ``video`` in both comparisons.  Only the target
+    is changed: the correct target uses the same clip, while the wrong target
+    uses a fixed different clip.  Positive contrast is the useful signal: the
+    model matches its own video better than an unrelated video.
     """
-    path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     was_training = model.training
     model.eval()
     predicted, target = model(video, target_mask)
-    similarity = F.cosine_similarity(predicted[0], target[0], dim=-1)
-    token_values = torch.full((target_mask.size(1),), 0.35, device=video.device)
-    token_values[target_mask[0]] = (similarity + 1) / 2  # map [-1, 1] to displayable [0, 1]
-    frames = video.size(2); image_size = video.size(3)
-    pixels = expand_token_mask(token_values, frames, image_size, tubelet_size, patch_size)
-    maps = pixels.unsqueeze(1).repeat(1, 3, 1, 1).cpu()
-    save_image(make_grid(maps, nrow=frames, padding=2), path)
+    wrong_target = model.target_features(wrong_video, target_mask)
+    correct = F.cosine_similarity(predicted[0], target[0], dim=-1)
+    wrong = F.cosine_similarity(predicted[0], wrong_target[0], dim=-1)
     model.train(was_training)
-    return similarity.mean().item()
+    return correct.cpu(), wrong.cpu(), (correct - wrong).cpu()
+
+
+def save_token_contrast_map(
+    values: torch.Tensor,
+    target_mask: torch.Tensor,
+    path: str | Path,
+    frames: int,
+    image_size: int,
+    tubelet_size: int,
+    patch_size: int,
+    title: str,
+    color_limit: float = 0.05,
+) -> None:
+    """Save a diverging per-tubelet map; masked values are grey context."""
+    path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
+    grid_t, grid_h = frames // tubelet_size, image_size // patch_size
+    token_map = torch.full((target_mask.size(1),), float("nan"))
+    token_map[target_mask[0].cpu()] = values.cpu()
+    token_map = token_map.view(grid_t, grid_h, grid_h).repeat_interleave(tubelet_size, 0)
+    columns = min(frames, 8); rows = (frames + columns - 1) // columns
+    figure, axes = plt.subplots(rows, columns, figsize=(2 * columns, 2 * rows), squeeze=False)
+    colormap = plt.colormaps["coolwarm"].copy(); colormap.set_bad("#777777")
+    image = None
+    for frame_index, axis in enumerate(axes.flat):
+        axis.axis("off")
+        if frame_index < frames:
+            image = axis.imshow(
+                token_map[frame_index], cmap=colormap, vmin=-color_limit, vmax=color_limit,
+                interpolation="nearest",
+            )
+            axis.set_title(f"frame {frame_index + 1}", fontsize=8)
+    assert image is not None
+    figure.colorbar(image, ax=axes.ravel().tolist(), shrink=0.78, label="cosine difference")
+    figure.suptitle(title, fontsize=12)
+    figure.tight_layout(); figure.savefig(path, dpi=160); plt.close(figure)

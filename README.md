@@ -78,7 +78,7 @@ Example diagnostic task: train a small probe on frozen clip features to predict 
 
 ### Inspecting a pretraining run
 
-JEPA predicts latent features, not reconstructed RGB pixels. Each synthetic run therefore saves an honest visual storyboard: `input_original_and_masked.png` shows the original clip above the sparse context encoder input; `prediction_similarity_step_*.png` shows target-tubelet cosine similarity at each checkpoint (bright means a better feature prediction; grey means visible context). Run held-out feature prediction evaluation after pretraining:
+JEPA predicts latent features, not reconstructed RGB pixels. Each run therefore saves an honest visual storyboard: `input_original_and_masked.png` shows the original clip above the sparse context encoder input. At checkpoints, `prediction_contrast_step_*.png` maps **correct-target cosine minus wrong-target cosine** for every predicted tubelet (red is better-than-wrong; grey is visible context). `prediction_contrast_change_from_0100_*.png` shows the improvement relative to step 100. These diverging maps make small, meaningful changes visible where absolute cosine maps saturate. Run held-out feature prediction evaluation after pretraining:
 
 ```bash
 python3 scripts/evaluate.py --checkpoint outputs/pretrain_synthetic/checkpoint_last.pt
@@ -98,6 +98,16 @@ This evaluation predicts one fixed late, central 3D target block while changing 
 
 ```bash
 python3 scripts/evaluate_context.py --checkpoint outputs/pretrain_something_v2_1k_tube/checkpoint_last.pt --samples 100
+```
+
+Compare the more discriminating held-out metric—correct-target cosine minus
+wrong-target cosine—across any matched checkpoints:
+
+```bash
+python3 scripts/compare_wrong_target_margin.py \
+  --checkpoint outputs/pretrain_something_v2_1k_tube/checkpoint_step_001100.pt \
+  --checkpoint outputs/pretrain_something_v2_1k_ema_cosine_2k/checkpoint_step_001100.pt \
+  --samples 100 --output outputs/wrong_target_margin_comparison.json
 ```
 
 ### Linear-probe checkpoint curve
