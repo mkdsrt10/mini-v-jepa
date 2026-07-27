@@ -1,10 +1,24 @@
-# Mini-V-JEPA
+# Mini V-JEPA From Scratch
 
 An approachable, from-scratch implementation of the core ideas behind Meta's V-JEPA: learn a video representation by predicting **latent target features** for masked spatiotemporal regions, not pixels.
 
 Mini-V-JEPA is deliberately compact enough to study end-to-end, while retaining the engineering habits that make research code useful: configuration-driven experiments, modular masking strategies, EMA target updates, smoke tests, and simple evaluation hooks.
 
 > **Scope.** This is an educational implementation inspired by V-JEPA, not an official Meta release or a reproduction of every training detail.
+
+A compact educational implementation of Meta's Video Joint Embedding Predictive Architecture (V-JEPA), built to understand every component rather than reproduce large-scale results.
+
+Highlights
+
+- Conv3D tubelet embedding
+- Video Vision Transformer
+- EMA target encoder
+- Spatiotemporal masking
+- Linear probing
+- k-NN evaluation
+- Retrieval benchmarks
+- Effective-rank analysis
+- Wrong-target diagnostics
 
 ## Why this repository
 
