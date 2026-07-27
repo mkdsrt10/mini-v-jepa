@@ -242,6 +242,31 @@ python3 scripts/evaluate_checkpoint_curve.py \
   --output outputs/pretrain_something_v2_10k_cuda_10k/checkpoint_evaluation_curve.json
 ```
 
+## Full SSv2 100k-update curve
+
+The compact Mini-V-JEPA was then trained on all 168,913 available SSv2 training
+videos (174 classes), with batch size 16 for 100,000 updates. Checkpoints were
+evaluated on the same fixed 10-class split as the 10k-video run. Effective rank
+is `exp(H(p))` of the centered held-out embedding covariance spectrum; it is a
+scale-sensitive diversity diagnostic, not a classification metric.
+
+| Step | Margin | Linear probe | k-NN | R@1 | R@5 | Effective rank |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 10,000 | 0.4454 | 12.5% | 13.5% | 12.0% | 42.5% | 13.1 |
+| 20,000 | **0.4979** | 11.5% | 13.5% | 12.0% | 44.0% | 23.4 |
+| 30,000 | 0.4425 | 15.5% | 13.0% | 12.5% | 48.0% | 29.1 |
+| 40,000 | 0.3392 | 12.0% | 16.0% | 13.5% | **53.0%** | 30.5 |
+| 50,000 | 0.2916 | 14.0% | 15.0% | 13.0% | 47.5% | 30.4 |
+| 100,000 | 0.2464 | **17.0%** | **18.5%** | **18.5%** | **53.0%** | **31.7** |
+
+The held-out wrong-target margin peaks at 20k then declines as wrong-target
+cosine rises. This is not representational collapse: effective rank increases
+throughout, and action metrics improve to their best values at 100k. Use the
+20k checkpoint for the strongest video-specific latent-prediction demo, and
+the 100k checkpoint for action classification and retrieval. The mismatch is a
+useful research finding: the current JEPA objective's best discriminator of
+individual videos is not necessarily its best action-semantic representation.
+
 ## Next steps
 
 1. **Full-data CUDA experiment.** The local SSv2 training set contains 168,913

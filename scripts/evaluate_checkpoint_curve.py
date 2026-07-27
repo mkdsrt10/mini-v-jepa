@@ -85,6 +85,20 @@ def retrieval_scores(train_features, train_labels, val_features, val_labels):
     }
 
 
+def effective_rank(features: torch.Tensor) -> float:
+    """Entropy effective rank of centered frozen embeddings.
+
+    ``exp(H(p))`` where ``p`` is the normalized covariance spectrum. It is the
+    number of equally-used embedding directions that would carry the same
+    variance. A sharp fall is an early warning for representational collapse.
+    """
+    centered = features.double() - features.double().mean(dim=0, keepdim=True)
+    spectrum = torch.linalg.svdvals(centered).square()
+    probabilities = spectrum / spectrum.sum().clamp_min(torch.finfo(spectrum.dtype).eps)
+    entropy = -(probabilities * probabilities.clamp_min(torch.finfo(spectrum.dtype).eps).log()).sum()
+    return entropy.exp().item()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, action="append", required=True)
@@ -138,6 +152,7 @@ def main() -> None:
             "correct_minus_wrong_margin": correct - wrong,
             "frozen_linear_probe_top1": probe_accuracy,
             "knn_classification_top1": knn_accuracy(train_feature, train_labels, val_feature, val_labels, args.knn_k),
+            "validation_embedding_effective_rank": effective_rank(val_feature),
             **retrieval_scores(train_feature, train_labels, val_feature, val_labels),
         })
     result = {
