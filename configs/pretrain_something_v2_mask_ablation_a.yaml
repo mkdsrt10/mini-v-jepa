@@ -1,0 +1,7 @@
+defaults: pretrain_something_v2_mask_ablation_base.yaml
+
+# A — unchanged reference: two groups of full-temporal V-JEPA tube masks.
+mask:
+  type: vjepa_tube
+training:
+  output_dir: outputs/mask_ablation_a_full_temporal

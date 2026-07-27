@@ -17,7 +17,8 @@ def extract_mean_features(encoder: nn.Module, loader, device: str):
 
 
 def fit_linear_probe(train_features, train_labels, val_features, val_labels,
-                     num_classes: int, epochs: int = 100, lr: float = 0.1):
+                     num_classes: int, epochs: int = 100, lr: float = 0.1,
+                     return_predictions: bool = False):
     """Fit a single linear layer; the encoder features remain fully frozen."""
     classifier = nn.Linear(train_features.size(1), num_classes)
     optimizer = torch.optim.SGD(classifier.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
@@ -32,4 +33,6 @@ def fit_linear_probe(train_features, train_labels, val_features, val_labels,
         for label in range(num_classes):
             subset = val_labels == label
             per_class[str(label)] = (predictions[subset] == label).float().mean().item() if subset.any() else None
+    if return_predictions:
+        return accuracy, per_class, predictions.cpu()
     return accuracy, per_class

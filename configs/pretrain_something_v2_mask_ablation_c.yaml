@@ -1,0 +1,16 @@
+defaults: pretrain_something_v2_mask_ablation_base.yaml
+
+# C — two masks are sampled per batch, matching A/B's objective count:
+# 50% standard 3D multi-block, 30% short-temporal blocks, 20% masks centred
+# on raw frame-difference motion. Every policy targets 66% of tubelets, which
+# matches the measured mean target ratio of the A/B full-temporal policies on
+# this small 8×7×7 token grid.
+mask:
+  type: mixed_ablation
+  ratio: 0.66
+  num_masks: 2
+  standard_probability: 0.50
+  short_temporal_probability: 0.30
+  motion_aware_probability: 0.20
+training:
+  output_dir: outputs/mask_ablation_c_mixed

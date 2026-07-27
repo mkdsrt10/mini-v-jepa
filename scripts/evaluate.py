@@ -13,6 +13,7 @@ from vjepa.data.collator import collate_videos
 from vjepa.data.video_dataset import MovingMNISTDataset, MovingShapesDataset, SomethingSomethingV2Dataset
 from vjepa.losses.jepa_loss import jepa_loss
 from vjepa.masking.multiblock import MultiBlockMask, VJEPATubeMask
+from vjepa.masking.ablation import CenterVisibleVJEPATubeMask, MixedAblationMask
 from vjepa.masking.random_tube import RandomTubeMask
 from vjepa.models.vjepa import VJEPA
 
@@ -50,6 +51,20 @@ def main() -> None:
     mask_config = config["mask"]
     if mask_config["type"] == "vjepa_tube":
         masker = VJEPATubeMask()
+    elif mask_config["type"] == "center_visible_vjepa_tube":
+        masker = CenterVisibleVJEPATubeMask(
+            min_center_visible=mask_config.get("min_center_visible", 0.30),
+            constrained_clip_fraction=mask_config.get("constrained_clip_fraction", 0.75),
+            center_size=mask_config.get("center_size", 3),
+        )
+    elif mask_config["type"] == "mixed_ablation":
+        masker = MixedAblationMask(
+            ratio=mask_config.get("ratio", 0.66),
+            num_masks=mask_config.get("num_masks", 2),
+            standard_probability=mask_config.get("standard_probability", 0.50),
+            short_temporal_probability=mask_config.get("short_temporal_probability", 0.30),
+            motion_aware_probability=mask_config.get("motion_aware_probability", 0.20),
+        )
     elif mask_config["type"] == "multiblock":
         masker = MultiBlockMask(mask_config["ratio"], mask_config.get("num_blocks", 4))
     else:
@@ -60,7 +75,10 @@ def main() -> None:
     with torch.no_grad():
         for batch in loader:
             video = batch["video"].to(device)
-            target_masks = masker(video.size(0), grid, device)
+            if getattr(masker, "requires_video", False):
+                target_masks = masker(video.size(0), grid, device, video=video)
+            else:
+                target_masks = masker(video.size(0), grid, device)
             target_masks = target_masks if isinstance(target_masks, list) else [target_masks]
             for target_mask in target_masks:
                 predicted, target = model(video, target_mask)

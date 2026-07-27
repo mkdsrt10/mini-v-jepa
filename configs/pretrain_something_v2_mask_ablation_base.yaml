@@ -1,0 +1,46 @@
+defaults: debug.yaml
+
+# Shared controlled protocol for the masking ablation. Every variant starts
+# from the same seed and uses all available SSv2 training videos. Only the
+# ``mask`` section and output directory differ in A/B/C.
+data:
+  dataset: something_v2
+  root: data/something-something-v2
+  split: train
+  num_classes: null
+  samples_per_class: null
+  class_templates: null
+  clip_frames: 16
+  image_size: 112
+  batch_size: 16
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 4
+
+model:
+  image_size: 112
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 128
+  depth: 3
+  num_heads: 4
+  predictor_depth: 2
+
+optim:
+  lr: 0.0003
+  lr_schedule: warmup_cosine
+  lr_start: 0.00003
+  lr_end: 0.00003
+  warmup_steps: 5000
+  weight_decay: 0.04
+  ema_momentum: 0.996
+  ema_schedule: cosine
+  ema_momentum_end: 0.9999
+
+training:
+  # 50k × 16 = 800k clips, about 4.7 nominal passes over full SSv2.
+  steps: 50000
+  log_every: 100
+  checkpoint_every: 5000
+  device: cuda

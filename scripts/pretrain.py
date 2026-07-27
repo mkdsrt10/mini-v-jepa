@@ -18,6 +18,7 @@ from vjepa.data.video_dataset import (
     SomethingSomethingV2Dataset,
 )
 from vjepa.masking.multiblock import MultiBlockMask, VJEPATubeMask
+from vjepa.masking.ablation import CenterVisibleVJEPATubeMask, MixedAblationMask
 from vjepa.masking.random_tube import RandomTubeMask
 from vjepa.models.vjepa import VJEPA
 from vjepa.training.schedules import cosine_momentum, warmup_cosine_learning_rate
@@ -112,6 +113,20 @@ def main() -> None:
     masker_type = config["mask"]["type"]
     if masker_type == "vjepa_tube":
         masker = VJEPATubeMask()
+    elif masker_type == "center_visible_vjepa_tube":
+        masker = CenterVisibleVJEPATubeMask(
+            min_center_visible=config["mask"].get("min_center_visible", 0.30),
+            constrained_clip_fraction=config["mask"].get("constrained_clip_fraction", 0.75),
+            center_size=config["mask"].get("center_size", 3),
+        )
+    elif masker_type == "mixed_ablation":
+        masker = MixedAblationMask(
+            ratio=config["mask"].get("ratio", 0.66),
+            num_masks=config["mask"].get("num_masks", 2),
+            standard_probability=config["mask"].get("standard_probability", 0.50),
+            short_temporal_probability=config["mask"].get("short_temporal_probability", 0.30),
+            motion_aware_probability=config["mask"].get("motion_aware_probability", 0.20),
+        )
     elif masker_type == "multiblock":
         masker = MultiBlockMask(config["mask"]["ratio"], config["mask"].get("num_blocks", 4))
     else:
@@ -165,7 +180,12 @@ def main() -> None:
                         model_config["tubelet_size"], model_config["patch_size"])
     contrast_baseline_path = output_dir / "preview_contrast_step_000100.pt"
     batches = iter(loader)
-    mask_description = "V-JEPA full-temporal two-group tube masks" if masker_type == "vjepa_tube" else f"target mask ratio={config['mask']['ratio']:.0%}"
+    descriptions = {
+        "vjepa_tube": "V-JEPA full-temporal two-group tube masks",
+        "center_visible_vjepa_tube": "V-JEPA tubes with centre visibility",
+        "mixed_ablation": "mixed standard/short-temporal/motion-aware masks",
+    }
+    mask_description = descriptions.get(masker_type, f"target mask ratio={config['mask']['ratio']:.0%}")
     print(
         f"Pretraining on {device}; {mask_description}; "
         f"EMA schedule={ema_schedule_name}; LR schedule={lr_schedule_name}"

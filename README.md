@@ -208,6 +208,38 @@ batch-32 throughput profile. It retains the same 1.6M total clip exposures but
 uses 50,000 updates. Start it as a fresh run; do not change an active run's
 batch size mid-experiment.
 
+### Controlled masking ablation
+
+The current compact model plateaued after 200k updates, so the next experiment
+changes masking—not model capacity. Three 50k-update runs start from the same
+seed and keep architecture, optimizer, LR/EMA schedules, batch size, full SSv2
+data, and held-out probe split fixed:
+
+| Run | Config | Policy |
+| --- | --- | --- |
+| A | `pretrain_something_v2_mask_ablation_a.yaml` | Current two-group full-temporal V-JEPA tubes |
+| B | `pretrain_something_v2_mask_ablation_b.yaml` | Current tubes with at least 30% of the central 3×3 region visible in 75% of clips |
+| C | `pretrain_something_v2_mask_ablation_c.yaml` | 50% standard 3D blocks, 30% short temporal blocks, 20% raw-motion-aware blocks; matched to A/B's 66% mean target ratio |
+
+Run each as a fresh experiment. Checkpoints at 10k, 25k, and 50k use the same
+frozen linear probe, k-NN, retrieval, effective-rank, and correct-vs-wrong
+evaluation. The evaluator now also reports strict action-pair accuracy for
+up/down, left/right push, and cover/uncover pairs.
+
+```bash
+python3 scripts/pretrain.py --config configs/pretrain_something_v2_mask_ablation_a.yaml
+python3 scripts/pretrain.py --config configs/pretrain_something_v2_mask_ablation_b.yaml
+python3 scripts/pretrain.py --config configs/pretrain_something_v2_mask_ablation_c.yaml
+
+python3 scripts/evaluate_checkpoint_curve.py \
+  --evaluation-config configs/pretrain_something_v2_10k_cuda.yaml \
+  --num-workers 8 \
+  --checkpoint outputs/mask_ablation_c_mixed/checkpoint_step_010000.pt \
+  --checkpoint outputs/mask_ablation_c_mixed/checkpoint_step_025000.pt \
+  --checkpoint outputs/mask_ablation_c_mixed/checkpoint_step_050000.pt \
+  --output outputs/mask_ablation_c_mixed/checkpoint_evaluation_curve.json
+```
+
 ## License
 
 MIT — add a `LICENSE` file before publishing if you choose a different license.

@@ -309,23 +309,29 @@ claim about a sub-1% difference.
 
 ## Next steps
 
-1. **Add video augmentation.** The current dataset path only resizes clips.
+1. **Run the controlled masking ablation.** `configs/pretrain_something_v2_mask_ablation_{a,b,c}.yaml`
+   now keeps the compact 1.24M-trainable-parameter model and all optimization
+   settings fixed while comparing full-temporal, centre-visible, and mixed
+   motion-aware masking for 50k updates. Evaluate at 10k, 25k, and 50k with
+   the fixed 10-class protocol. A 2–3 point probe gain without a rank decrease
+   is evidence that masking, rather than capacity, was the bottleneck.
+2. **Add video augmentation.** The current dataset path only resizes clips.
    Add temporal jitter, random resized crop, and color perturbation during
    pretraining. This is the most direct way to force invariance across
    appearance changes without changing architecture.
-2. **Make temporal prediction harder.** Keep the validated tube-mask path but
+3. **Make temporal prediction harder.** Keep the validated tube-mask path but
    mix in shorter 3D blocks and future-only target blocks. Full-temporal tubes
    can be solved from same-time spatial context; this change tests whether the
    encoder actually needs motion history.
-3. **Scale one controlled architecture variable.** After the above baseline,
+4. **Scale one controlled architecture variable.** After the above baseline,
    increase the encoder from 128 dimensions/3 blocks to the planned 384
    dimensions/6 blocks, keeping resolution, clip length, data, and evaluation
    protocol fixed. Compare at matched clip exposures rather than matched
    update counts.
-4. **Keep the margin as a diagnostic, not a gate.** Always report correct
+5. **Keep the margin as a diagnostic, not a gate.** Always report correct
    cosine, wrong cosine, and their difference, but select checkpoints using
    held-out probes and retrieval as well.
-5. **Use more reliable evaluation uncertainty.** Increase the held-out set or
+6. **Use more reliable evaluation uncertainty.** Increase the held-out set or
    repeat class-balanced splits so small differences in R@1 and probe accuracy
    are not mistaken for meaningful gains.
 

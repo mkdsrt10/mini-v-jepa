@@ -20,6 +20,16 @@ from vjepa.evaluation.retrieval import nearest_neighbors
 from vjepa.models.vjepa import VJEPA
 
 
+# These inverse or closely-confusable action pairs are all present in the fixed
+# ten-class evaluation subset. A prediction outside the pair is counted as
+# wrong, making this a strict temporal/action-direction diagnostic.
+ACTION_PAIRS = (
+    ("Moving something up", "Moving something down"),
+    ("Pushing something from left to right", "Pushing something from right to left"),
+    ("Covering something with something", "Uncovering something"),
+)
+
+
 def step_of(path: Path, checkpoint: dict) -> int:
     return checkpoint["trainer"].get("global_step", int(re.search(r"(\d+)", path.stem).group(1)))
 
@@ -99,6 +109,24 @@ def effective_rank(features: torch.Tensor) -> float:
     return entropy.exp().item()
 
 
+def action_pair_accuracy(predictions: torch.Tensor, labels: torch.Tensor,
+                         class_templates: list[str] | None) -> tuple[float | None, dict[str, float]]:
+    """Mean strict accuracy over available directional/inverse action pairs."""
+    if class_templates is None:
+        return None, {}
+    indices = {template: index for index, template in enumerate(class_templates)}
+    results = {}
+    for first, second in ACTION_PAIRS:
+        if first not in indices or second not in indices:
+            continue
+        pair_indices = torch.tensor([indices[first], indices[second]], dtype=labels.dtype)
+        subset = (labels == pair_indices[0]) | (labels == pair_indices[1])
+        if subset.any():
+            name = f"{first}__vs__{second}"
+            results[name] = (predictions[subset] == labels[subset]).float().mean().item()
+    return (sum(results.values()) / len(results) if results else None), results
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, action="append", required=True)
@@ -156,15 +184,22 @@ def main() -> None:
     results = []
     for index, ((path, checkpoint), train_feature, val_feature, margin) in enumerate(zip(checkpoints, train_features, val_features, margins)):
         torch.manual_seed(config["seed"])
-        probe_accuracy, _ = fit_linear_probe(train_feature, train_labels, val_feature, val_labels,
-                                              evaluation_data["num_classes"], args.probe_epochs)
+        probe_accuracy, _, probe_predictions = fit_linear_probe(
+            train_feature, train_labels, val_feature, val_labels,
+            evaluation_data["num_classes"], args.probe_epochs, return_predictions=True,
+        )
         correct = margin["correct"] / margin["tokens"]
         wrong = margin["wrong"] / margin["tokens"]
+        pair_accuracy, pair_details = action_pair_accuracy(
+            probe_predictions, val_labels, evaluation_data.get("class_templates"),
+        )
         results.append({
             "checkpoint": str(path), "step": step_of(path, checkpoint),
             "correct_target_cosine": correct, "wrong_target_cosine": wrong,
             "correct_minus_wrong_margin": correct - wrong,
             "frozen_linear_probe_top1": probe_accuracy,
+            "action_pair_accuracy": pair_accuracy,
+            "action_pair_details": pair_details,
             "knn_classification_top1": knn_accuracy(train_feature, train_labels, val_feature, val_labels, args.knn_k),
             "validation_embedding_effective_rank": effective_rank(val_feature),
             **retrieval_scores(train_feature, train_labels, val_feature, val_labels),

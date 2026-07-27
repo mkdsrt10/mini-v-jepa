@@ -1,0 +1,11 @@
+defaults: pretrain_something_v2_mask_ablation_base.yaml
+
+# B — current V-JEPA-style tubes, while 75% of clips retain at least 30% of a
+# central 3×3 tubelet interaction region as visible context.
+mask:
+  type: center_visible_vjepa_tube
+  min_center_visible: 0.30
+  constrained_clip_fraction: 0.75
+  center_size: 3
+training:
+  output_dir: outputs/mask_ablation_b_center_visible

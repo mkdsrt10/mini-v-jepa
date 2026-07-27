@@ -25,7 +25,12 @@ class Trainer:
             learning_rate = self.learning_rate_schedule(self.global_step + 1)
             for parameter_group in self.optimizer.param_groups:
                 parameter_group["lr"] = learning_rate
-        masks = self.masker(video.size(0), self.grid, video.device)
+        # The motion-aware ablation policy derives target blocks from raw frame
+        # differences. Existing maskers remain video-independent.
+        if getattr(self.masker, "requires_video", False):
+            masks = self.masker(video.size(0), self.grid, video.device, video=video)
+        else:
+            masks = self.masker(video.size(0), self.grid, video.device)
         masks = masks if isinstance(masks, list) else [masks]
         losses, target_stds, prediction_stds, mask_ratios, correct_cosines = [], [], [], [], []
         for mask in masks:
@@ -65,6 +70,9 @@ class Trainer:
             "learning_rate": self.optimizer.param_groups[0]["lr"],
             "target_std": sum(target_stds) / len(target_stds),
             "prediction_std": sum(prediction_stds) / len(prediction_stds),
+            # A comma-separated description remains JSONL-friendly while
+            # revealing the sampled policies in the mixed-mask run.
+            "mask_policies": ",".join(getattr(self.masker, "last_policy_names", [])),
         }
 
     def state_dict(self) -> dict:
