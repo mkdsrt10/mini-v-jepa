@@ -174,7 +174,12 @@ def main() -> None:
     preview_video = dataset[0]["video"].unsqueeze(0).to(device)
     # A different fixed clip supplies the wrong target in the contrast map.
     preview_wrong_video = dataset[1]["video"].unsqueeze(0).to(device)
-    preview_mask = masker(1, grid, device)
+    # Motion-aware masks need the held-aside clip to estimate frame changes;
+    # all other policies remain video-independent.
+    if getattr(masker, "requires_video", False):
+        preview_mask = masker(1, grid, device, video=preview_video)
+    else:
+        preview_mask = masker(1, grid, device)
     preview_mask = preview_mask[0] if isinstance(preview_mask, list) else preview_mask
     save_input_and_mask(preview_video[0], preview_mask[0], output_dir / "input_original_and_masked.png",
                         model_config["tubelet_size"], model_config["patch_size"])
