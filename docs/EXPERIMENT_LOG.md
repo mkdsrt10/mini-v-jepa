@@ -307,6 +307,44 @@ The late checkpoints are close enough that future comparisons should use a
 larger validation set or repeated class-balanced splits before making a strong
 claim about a sub-1% difference.
 
+## Masking ablation: A versus B
+
+The controlled 50k-step masking experiment keeps the compact architecture,
+full SSv2 data, optimizer, schedules, batch size, seed, and held-out
+10-class protocol fixed. This isolates the effect of what the context encoder
+can see.
+
+- **A:** the existing two-group full-temporal tube masks.
+- **B:** the same tubes, but in 75% of clips at least 30% of the central 3×3
+  tubelet region remains visible. The mean target-mask ratio is matched to A
+  at approximately 66%.
+
+| Run / step | Margin | Frozen probe | Action-pair | k-NN | Effective rank | R@1 | R@5 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| A / 10k | 0.471 | 11.5% | 7.5% | 13.5% | 13.8 | 13.0% | 47.0% |
+| A / 25k | **0.483** | 12.5% | 10.0% | 14.5% | 24.3 | 7.5% | 45.5% |
+| A / 50k | 0.352 | 13.0% | 9.2% | **16.0%** | **29.2** | 10.5% | 47.0% |
+| B / 10k | 0.397 | 16.5% | 12.5% | 12.5% | 19.8 | **16.5%** | 47.5% |
+| B / 20k | 0.263 | 20.0% | 15.0% | 13.0% | **28.9** | 14.5% | 46.0% |
+| B / 25k | 0.232 | 21.5% | **19.2%** | 13.0% | 26.8 | 14.0% | 48.5% |
+| B / 30k | 0.232 | **22.5%** | 18.3% | 11.5% | 26.4 | 15.0% | 44.5% |
+| B / 40k | 0.239 | 20.0% | 17.5% | 14.0% | 25.9 | 12.0% | **49.0%** |
+
+The conclusion is unambiguous: **centre visibility is a real masking
+bottleneck in this compact setup.** B improves frozen linear accuracy by nine
+points at 25k and action-pair accuracy by about nine points, without a collapse
+in effective rank. Its best linear checkpoint is B-30k; its best action-pair
+checkpoint is B-25k. B's lower correct-minus-wrong margin is not a regression
+for transfer: it indicates that the representation becomes less specific to
+one individual video while becoming more action-semantic.
+
+The prediction-contrast images are useful for checking mask geometry, but not
+for selecting checkpoints across runs. They use different fixed preview masks,
+and the fixed `±0.05` colour scale saturates B's predominantly positive map.
+Held-out probe, retrieval, rank, and action-pair metrics are the comparison
+criteria. The original 100k full-data run is useful historical context, but it
+used a 100k LR horizon; A is the proper schedule-matched ablation baseline.
+
 ## Next steps
 
 1. **Run the controlled masking ablation.** `configs/pretrain_something_v2_mask_ablation_{a,b,c}.yaml`
