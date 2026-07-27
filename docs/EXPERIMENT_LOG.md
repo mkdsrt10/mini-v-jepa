@@ -267,25 +267,67 @@ the 100k checkpoint for action classification and retrieval. The mismatch is a
 useful research finding: the current JEPA objective's best discriminator of
 individual videos is not necessarily its best action-semantic representation.
 
+## Controlled 100k-to-200k continuation
+
+The 100k checkpoint was resumed for a further 100k updates using the same full
+SSv2 data, model, masks, batch size, optimizer state, and EMA target. The
+original LR and EMA schedules had already reached their terminal values at
+100k, so the continuation held LR at `3e-5` and EMA momentum at `0.9999`
+instead of accidentally reheating the cosine schedule.
+
+Evaluation used the identical fixed 10-class protocol above: 100 labelled
+training videos and 20 held-out validation videos per class. This means the
+numbers can be compared directly with the 100k checkpoint.
+
+| Step | Margin | Linear probe | k-NN | R@1 | R@5 | Effective rank |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 100,000 | 0.2464 | 17.0% | 18.5% | **18.5%** | 53.0% | 31.7 |
+| 125,000 | 0.2418 | 16.5% | 19.5% | **19.5%** | 53.5% | 31.7 |
+| 150,000 | 0.2459 | 17.0% | 17.5% | 14.0% | 53.5% | 32.0 |
+| 170,000 | 0.2483 | 17.5% | 18.5% | 14.5% | 54.0% | 32.0 |
+| 180,000 | 0.2503 | 17.0% | 19.0% | 15.5% | 54.0% | 32.3 |
+| 195,000 | **0.2562** | 16.5% | **21.0%** | 15.0% | **54.5%** | **32.4** |
+| 200,000 | 0.2550 | **18.5%** | 20.5% | 12.0% | 54.0% | 32.0 |
+
+This is **representation saturation, not collapse**. From 150k onward,
+effective rank stays close to 32, R@5 stays near 54%, and action metrics make
+only small, non-monotonic changes. At the same time, target/prediction feature
+standard deviations remain non-zero and the held-out correct-minus-wrong
+margin remains positive. The representation is stable and useful, but this
+small model/objective is no longer discovering materially new useful feature
+directions.
+
+Checkpoint choice should follow the use case:
+
+- **200k:** best frozen linear-probe result (18.5%); use for an action-classification baseline.
+- **195k:** best margin, k-NN, effective rank, and R@5; use for a general embedding/retrieval demo.
+- **180k:** marginally best R@1 among late checkpoints, but this difference is only one query on a 200-video validation set and should not be overinterpreted.
+
+The late checkpoints are close enough that future comparisons should use a
+larger validation set or repeated class-balanced splits before making a strong
+claim about a sub-1% difference.
+
 ## Next steps
 
-1. **Full-data CUDA experiment.** The local SSv2 training set contains 168,913
-   usable videos from 174 classes. Run
-   `configs/pretrain_something_v2_full_cuda_b16_100k.yaml`: batch 16, eight
-   persistent VP9 decoder workers, and 100,000 updates (1.6M clip exposures,
-   about 9.5 dataset passes). Keep the compact encoder unchanged so this is a
-   data-diversity and duration comparison, not a mixed scaling experiment.
-   Evaluate the same fixed 10-class probe/retrieval split at steps 2,500,
-   10,000, 25,000, 50,000, 75,000, and 100,000.
-2. **Isolate schedules.** Run fixed-EMA plus scheduled-LR and scheduled-EMA
-   plus fixed-LR, each from the same seed and for 1,100 steps. Compare margins.
-3. **Keep the margin as the gate.** Report correct cosine, wrong cosine, and
-   their difference at every selected checkpoint.
-4. **Run a fixed full linear probe.** Use the same train/validation examples,
-   classifier epochs, and seeds for all checkpoints.
-5. **Increase task difficulty only if needed.** If a larger data run still has
-   a small margin or poor probe accuracy, strengthen masks or reduce context
-   while checking that target feature standard deviation remains healthy.
+1. **Add video augmentation.** The current dataset path only resizes clips.
+   Add temporal jitter, random resized crop, and color perturbation during
+   pretraining. This is the most direct way to force invariance across
+   appearance changes without changing architecture.
+2. **Make temporal prediction harder.** Keep the validated tube-mask path but
+   mix in shorter 3D blocks and future-only target blocks. Full-temporal tubes
+   can be solved from same-time spatial context; this change tests whether the
+   encoder actually needs motion history.
+3. **Scale one controlled architecture variable.** After the above baseline,
+   increase the encoder from 128 dimensions/3 blocks to the planned 384
+   dimensions/6 blocks, keeping resolution, clip length, data, and evaluation
+   protocol fixed. Compare at matched clip exposures rather than matched
+   update counts.
+4. **Keep the margin as a diagnostic, not a gate.** Always report correct
+   cosine, wrong cosine, and their difference, but select checkpoints using
+   held-out probes and retrieval as well.
+5. **Use more reliable evaluation uncertainty.** Increase the held-out set or
+   repeat class-balanced splits so small differences in R@1 and probe accuracy
+   are not mistaken for meaningful gains.
 
 ## Reproducibility checklist
 

@@ -1,0 +1,51 @@
+defaults: debug.yaml
+
+# Controlled continuation of the completed 100k full-SSv2 run.
+# Launch with --resume pointing to its checkpoint_last.pt.  The optimizer and
+# both online/EMA encoder weights are restored from that checkpoint.
+data:
+  dataset: something_v2
+  root: data/something-something-v2
+  split: train
+  num_classes: null
+  samples_per_class: null
+  class_templates: null
+  clip_frames: 16
+  image_size: 112
+  batch_size: 16
+  num_workers: 8
+  pin_memory: true
+  prefetch_factor: 4
+
+model:
+  # Intentionally identical to the 100k baseline: only training duration
+  # changes, so the checkpoint comparison is interpretable.
+  image_size: 112
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 128
+  depth: 3
+  num_heads: 4
+  predictor_depth: 2
+
+mask:
+  type: vjepa_tube
+
+optim:
+  # At step 100k the original warmup/cosine schedule had reached its terminal
+  # values.  Keep those values fixed rather than accidentally reheating the
+  # optimizer by redefining the original cosine curve over 200k steps.
+  lr: 0.00003
+  lr_schedule: constant
+  weight_decay: 0.04
+  ema_momentum: 0.9999
+  ema_schedule: constant
+
+training:
+  # Global step target, not an additional 200k updates: 100k -> 200k.
+  steps: 200000
+  log_every: 100
+  checkpoint_every: 2500
+  output_dir: outputs/pretrain_something_v2_full_cuda_b16_continue_200k
+  device: cuda

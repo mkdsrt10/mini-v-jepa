@@ -108,6 +108,8 @@ def main() -> None:
     parser.add_argument("--val-per-class", type=int, default=20)
     parser.add_argument("--probe-epochs", type=int, default=100)
     parser.add_argument("--knn-k", type=int, default=20)
+    parser.add_argument("--num-workers", type=int,
+                        help="Parallel video-decoder workers; defaults to the evaluation config.")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -131,7 +133,19 @@ def main() -> None:
 
     train_data = dataset_for(evaluation_config, "train", args.train_per_class)
     val_data = dataset_for(evaluation_config, "validation", args.val_per_class)
-    loader_args = {"batch_size": evaluation_data["batch_size"], "collate_fn": collate_videos}
+    # Decoding VP9 WebM clips is much slower than forwarding this compact
+    # encoder.  Use the evaluation configuration's workers so checkpoint
+    # comparisons do not spend most of their time waiting on a single decoder.
+    num_workers = evaluation_data.get("num_workers", 0) if args.num_workers is None else args.num_workers
+    loader_args = {
+        "batch_size": evaluation_data["batch_size"],
+        "collate_fn": collate_videos,
+        "num_workers": num_workers,
+        "pin_memory": device == "cuda",
+    }
+    if num_workers > 0:
+        loader_args["persistent_workers"] = True
+        loader_args["prefetch_factor"] = evaluation_data.get("prefetch_factor", 2)
     train_features, train_labels = collect_train_features(models, DataLoader(train_data, **loader_args), device)
     frames = model_config.get("num_frames", model_config.get("frames"))
     grid = (frames // model_config["tubelet_size"], model_config["image_size"] // model_config["patch_size"], model_config["image_size"] // model_config["patch_size"])
