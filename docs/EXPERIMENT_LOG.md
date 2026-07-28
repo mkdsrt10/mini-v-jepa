@@ -345,6 +345,33 @@ Held-out probe, retrieval, rank, and action-pair metrics are the comparison
 criteria. The original 100k full-data run is useful historical context, but it
 used a 100k LR horizon; A is the proper schedule-matched ablation baseline.
 
+## Masking ablation: C mixed temporal and motion-aware masks
+
+**C** samples two 66%-target-ratio masks per batch: 50% standard 3D
+multi-block, 30% short-temporal blocks, and 20% blocks centred on raw
+frame-difference motion. It improves feature diversity relative to A, but does
+not surpass B's action representation.
+
+| Step | Margin | Frozen probe | Action-pair | k-NN | Effective rank | R@1 | R@5 |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 10k | 0.241 | 16.0% | 11.7% | 8.0% | 19.6 | 12.5% | 47.0% |
+| 20k | **0.250** | **19.5%** | 15.8% | **14.5%** | 25.6 | 12.5% | 43.0% |
+| 30k | 0.234 | 15.0% | 14.2% | 13.0% | 29.8 | **15.0%** | 45.5% |
+| 40k | 0.231 | 17.0% | 16.7% | 12.5% | **30.5** | **15.0%** | 47.5% |
+| 50k | 0.236 | 18.5% | **17.5%** | 14.0% | 30.4 | 13.5% | **48.5%** |
+
+C is a useful diversity-oriented representation, but B remains the action
+winner: B-30k reaches 22.5% frozen linear accuracy and B-25k reaches 19.2%
+action-pair accuracy. Crucially, C's up-versus-down accuracy is 0% at both 40k
+and 50k. Motion-aware target selection alone does not force directional motion
+prediction because same-time spatial context remains available.
+
+The next experiment therefore scales **B**, not C: preserve centre visibility
+while increasing the encoder from 128 dimensions/3 blocks/4 heads to 192
+dimensions/4 blocks/6 heads. Head dimension remains 32 and all other training
+settings remain fixed. This cleanly tests whether the B representation is now
+capacity-limited.
+
 ## Next steps
 
 1. **Run the controlled masking ablation.** `configs/pretrain_something_v2_mask_ablation_{a,b,c}.yaml`

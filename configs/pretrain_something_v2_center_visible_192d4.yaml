@@ -1,0 +1,24 @@
+defaults: pretrain_something_v2_mask_ablation_base.yaml
+
+# Capacity follow-up to the masking ablation. Preserve B's winning central
+# context policy and all data/optimizer settings; only encoder width/depth
+# change. Head dimension remains 32 (192 / 6), matching the 128 / 4 baseline.
+model:
+  image_size: 112
+  num_frames: 16
+  patch_size: 16
+  tubelet_size: 2
+  embed_dim: 192
+  depth: 4
+  num_heads: 6
+  predictor_depth: 2
+
+mask:
+  type: center_visible_vjepa_tube
+  min_center_visible: 0.30
+  constrained_clip_fraction: 0.75
+  center_size: 3
+
+training:
+  # Match the 50k-step A/B/C ablation budget before considering further scale.
+  output_dir: outputs/center_visible_192d4_50k
